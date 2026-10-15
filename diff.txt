@@ -1,0 +1,462 @@
+﻿diff --git a/consolidado/07__reamostragem_linear.md b/consolidado/07__reamostragem_linear.md
+new file mode 100644
+index 00000000..75ccbb7e
+--- /dev/null
++++ b/consolidado/07__reamostragem_linear.md
+@@ -0,0 +1,139 @@
++# Consolidado — Reamostragem na Regressão Linear Múltipla
++
++## 1. Objetivo da tarefa
++
++Esta etapa teve como objetivo avaliar o comportamento dos modelos de regressão linear por meio de técnicas de reamostragem:
++
++1. **Validação Cruzada K-Fold (K = 5):** avaliar o erro de predição fora da amostra e comparar um modelo simples com um modelo que também considera Município e Fluxo.
++2. **Bootstrap (B = 2000):** quantificar a incerteza da estimativa do coeficiente associado ao peso da carga, obtendo o erro padrão e um intervalo de confiança de 95%.
++
++---
++
++## 2. Preparação dos dados
++
++Foi utilizada a base `df_sazonal_lideres.csv`, carregada a partir da pasta `data/processed`.
++
++Foram mantidas apenas as observações com:
++
++- `Valor US$ FOB > 0`
++- `Quilograma Líquido > 0`
++
++Em seguida, foram criadas duas variáveis em escala logarítmica:
++
++- `log_valor_fob = log(Valor US$ FOB)`
++- `log_peso_kg = log(Quilograma Líquido)`
++
++As variáveis `Município` e `Fluxo` foram transformadas em fatores, considerando os níveis definidos no código.
++
++Após o tratamento, a base ficou com **481 observações**.
++
++---
++
++## 3. Validação Cruzada 5-Fold
++
++Foram definidos dois modelos:
++
++### Modelo 1 — Simples
++
++```text
++log_valor_fob ~ log_peso_kg
++```
++
++Esse modelo utiliza somente o peso da carga como variável explicativa.
++
++### Modelo 2 — Com variáveis categóricas
++
++```text
++log_valor_fob ~ log_peso_kg + Municipio + Fluxo
++```
++
++Além do peso, esse modelo considera o município e o tipo de fluxo.
++
++A base foi dividida aleatoriamente em **5 folds**. Em cada rodada, quatro partes foram utilizadas para treinamento e uma para validação.
++
++Foram calculados:
++
++- **MSE (Mean Squared Error):** erro quadrático médio;
++- **RMSE (Root Mean Squared Error):** raiz do erro quadrático médio.
++
++### Resultados
++
++| Fold | MSE Modelo 1 | RMSE Modelo 1 | MSE Modelo 2 | RMSE Modelo 2 |
++|---:|---:|---:|---:|---:|
++| 1 | 0,9240 | 0,9612 | 0,9240 | 0,9612 |
++| 2 | 1,1333 | 1,0646 | 1,1333 | 1,0646 |
++| 3 | 1,1453 | 1,0702 | 1,1453 | 1,0702 |
++| 4 | 0,8658 | 0,9305 | 0,8658 | 0,9305 |
++| 5 | 1,2708 | 1,1273 | 1,2708 | 1,1273 |
++
++Os valores obtidos para os dois modelos foram iguais em todos os folds apresentados.
++
++Isso indica que, **nesta execução da validação cruzada**, o modelo com Município e Fluxo não apresentou diferença no erro de predição em relação ao modelo simples.
++
++### Ajuste metodológico realizado
++
++Durante a validação, o código verificou se `Município` e `Fluxo` possuíam mais de um nível no conjunto de treinamento de cada fold.
++
++Essa verificação foi necessária porque um fold poderia apresentar apenas um nível de uma variável categórica, impedindo o ajuste normal do modelo `lm()`.
++
++Quando essa situação ocorreria, o código utiliza o modelo simples como alternativa para aquela rodada, evitando a interrupção da execução.
++
++---
++
++## 4. Bootstrap
++
++Na segunda parte foi utilizado o método **Bootstrap**, com **B = 2000 reamostragens**.
++
++Em cada reamostragem:
++
++1. Foram selecionadas 481 observações com reposição;
++2. O modelo linear foi ajustado novamente;
++3. O coeficiente associado a `log_peso_kg` foi armazenado.
++
++Antes do Bootstrap, o código também verificou quais níveis das variáveis categóricas estavam disponíveis e ajustou a fórmula do modelo de maneira segura.
++
++O objetivo foi observar como a estimativa do coeficiente varia quando diferentes amostras são retiradas da mesma base.
++
++### Resultados
++
++- **Estimativa original do coeficiente:** `0,9310`
++- **Erro padrão Bootstrap:** `0,0174`
++- **IC percentil de 95%:** `[0,8920 ; 0,9608]`
++
++O intervalo de confiança foi obtido a partir dos percentis 2,5% e 97,5% da distribuição das 2000 estimativas Bootstrap.
++
++---
++
++## 5. Gráfico da distribuição Bootstrap
++
++Foi produzido um gráfico contendo:
++
++- histograma das estimativas obtidas nas 2000 reamostragens;
++- curva de densidade;
++- linha correspondente à estimativa original;
++- linhas delimitando o intervalo de confiança de 95%.
++
++O gráfico permite visualizar a distribuição das estimativas do coeficiente `log_peso_kg` e verificar a concentração dos resultados ao redor da estimativa original.
++
++---
++
++## 6. Resultado geral da tarefa
++
++A etapa de reamostragem mostrou que:
++
++- a base analisada possui **481 observações** após o tratamento;
++- a validação cruzada foi realizada com **5 folds**;
++- os dois modelos apresentaram os mesmos valores de MSE e RMSE nos cinco folds registrados;
++- o coeficiente associado ao peso apresentou estimativa original de **0,9310**;
++- o Bootstrap com **2000 reamostragens** produziu erro padrão de **0,0174**;
++- o intervalo de confiança de 95% para o coeficiente foi **[0,8920; 0,9608]**.
++
++Assim, esta etapa serviu para avaliar tanto o comportamento preditivo dos modelos fora da amostra quanto a incerteza associada à estimativa do efeito do peso sobre o valor FOB.
++
++---
++
++## 7. Conclusão
++
++A reamostragem permitiu complementar a análise da regressão linear com duas perspectivas: **desempenho preditivo**, por meio da validação cruzada, e **incerteza estatística**, por meio do Bootstrap.
++
++Na validação cruzada realizada, os resultados de erro dos modelos simples e ampliado foram iguais nos cinco folds. No Bootstrap, as 2000 reamostragens produziram uma distribuição das estimativas concentrada em torno do valor original de `0,9310`, com erro padrão de `0,0174` e intervalo de confiança de 95% entre `0,8920` e `0,9608`.
+diff --git a/consolidado/07_reamostragem_logistica.md b/consolidado/07_reamostragem_logistica.md
+new file mode 100644
+index 00000000..f5380a36
+--- /dev/null
++++ b/consolidado/07_reamostragem_logistica.md
+@@ -0,0 +1,158 @@
++# Consolidado — Reamostragem na Regressão Logística
++
++## 1. Objetivo da tarefa
++
++Esta etapa teve como objetivo avaliar o modelo de regressão logística utilizando duas técnicas de reamostragem:
++
++1. **Validação Cruzada K-Fold (K = 5):** estimar o desempenho preditivo do modelo por meio de Acurácia, Precisão, Recall e Especificidade.
++2. **Bootstrap (B = 2000):** avaliar a distribuição e a incerteza do coeficiente logístico e do Odds Ratio.
++
++---
++
++## 2. Preparação dos dados
++
++Foi utilizada a base `df_sazonal_lideres.csv`, localizada em `data/processed`.
++
++O código identificou automaticamente a coluna relacionada ao peso que contém a palavra `Quilograma`.
++
++A variável `Fluxo` foi transformada em uma variável binária:
++
++- valor associado à Exportação → `1`
++- demais valores → `0`
++
++O peso em quilogramas também foi escalado para milhões:
++
++```text
++Quilograma_Liquido_Escalado = Quilograma_Liquido / 1.000.000
++```
++
++Foram removidas observações com valores ausentes nas variáveis utilizadas.
++
++Após o tratamento, a base ficou com **481 observações**.
++
++---
++
++## 3. Modelo de regressão logística
++
++Foi utilizado o modelo:
++
++```text
++Fluxo_bin ~ Quilograma_Liquido_Escalado
++```
++
++O modelo foi ajustado com distribuição binomial e função de ligação logit.
++
++As probabilidades previstas foram transformadas em classes utilizando o ponto de corte de **0,5**:
++
++- probabilidade ≥ 0,5 → classe 1;
++- probabilidade < 0,5 → classe 0.
++
++---
++
++## 4. Validação Cruzada 5-Fold
++
++A base foi dividida aleatoriamente em **5 folds**.
++
++Em cada rodada:
++
++1. quatro folds foram utilizados para treinamento;
++2. um fold foi utilizado para validação;
++3. o modelo logístico foi ajustado no conjunto de treinamento;
++4. foram calculadas as probabilidades para o conjunto de validação;
++5. as probabilidades foram convertidas em classes;
++6. foram calculadas as métricas de desempenho.
++
++As métricas utilizadas foram:
++
++- **Acurácia:** proporção total de classificações corretas;
++- **Precisão:** proporção das previsões positivas que realmente eram positivas;
++- **Recall:** proporção dos casos positivos corretamente identificados;
++- **Especificidade:** proporção dos casos negativos corretamente identificados.
++
++### Resultados
++
++| Fold | Acurácia | Precisão | Recall | Especificidade |
++|---:|---:|---:|---:|---:|
++| 1 | 0,7010 | 0,8333 | 0,5102 | 0,8958 |
++| 2 | 0,7708 | 0,8788 | 0,6170 | 0,9184 |
++| 3 | 0,7292 | 0,9200 | 0,4894 | 0,9592 |
++| 4 | 0,7188 | 0,8065 | 0,5435 | 0,8800 |
++| 5 | 0,6667 | 0,7879 | 0,5098 | 0,8444 |
++
++Os resultados mostram que as métricas variaram entre os cinco folds, o que é esperado porque cada rodada utiliza uma divisão diferente entre treinamento e validação.
++
++---
++
++## 5. Bootstrap
++
++Na segunda parte foi utilizado o método **Bootstrap**, com **B = 2000 reamostragens**.
++
++Primeiro, foi ajustado o modelo na base original. Depois, em cada uma das 2000 iterações:
++
++1. foram selecionadas 481 observações com reposição;
++2. o modelo logístico foi ajustado novamente;
++3. o coeficiente de `Quilograma_Liquido_Escalado` foi armazenado;
++4. o Odds Ratio foi calculado a partir desse coeficiente.
++
++O Odds Ratio foi calculado por:
++
++```text
++OR = exp(β)
++```
++
++---
++
++## 6. Resultados do Bootstrap
++
++Os resultados obtidos foram:
++
++- **Beta original:** `0,016866`
++- **Odds Ratio original:** `1,017009`
++- **Erro padrão Bootstrap:** `0,001973`
++- **IC 95% do Beta:** `[0,013423 ; 0,021196]`
++
++O intervalo de confiança foi calculado pelo método percentil, utilizando os percentis 2,5% e 97,5% da distribuição das estimativas Bootstrap.
++
++O código também calculou o intervalo de confiança do Odds Ratio, embora esse resultado não tenha sido impresso no output apresentado.
++
++---
++
++## 7. Gráfico da distribuição Bootstrap
++
++Foi produzido um gráfico da distribuição das estimativas Bootstrap do coeficiente logístico.
++
++O gráfico contém:
++
++- histograma das estimativas;
++- curva de densidade;
++- indicação da estimativa original;
++- limites do intervalo de confiança de 95%.
++
++A finalidade é visualizar como o coeficiente varia entre as diferentes reamostragens.
++
++---
++
++## 8. Resultado geral da tarefa
++
++A análise apresentou:
++
++- **481 observações** utilizadas no modelo;
++- validação cruzada com **5 folds**;
++- avaliação por Acurácia, Precisão, Recall e Especificidade;
++- **2000 reamostragens Bootstrap**;
++- coeficiente original de `0,016866`;
++- Odds Ratio original de `1,017009`;
++- erro padrão Bootstrap de `0,001973`;
++- intervalo de confiança de 95% do coeficiente entre `0,013423` e `0,021196`.
++
++---
++
++## 9. Conclusão
++
++A etapa de reamostragem permitiu avaliar o modelo logístico tanto em relação ao seu desempenho de classificação quanto à incerteza da estimativa de seu coeficiente.
++
++A validação cruzada mostrou variação das métricas entre os cinco folds, enquanto o Bootstrap permitiu construir uma distribuição empírica das estimativas do coeficiente logístico.
++
++O coeficiente original foi `0,016866`, com erro padrão Bootstrap de `0,001973` e IC 95% de `[0,013423; 0,021196]`. O Odds Ratio correspondente na amostra original foi `1,017009`.
++
++Esses resultados complementam a análise do modelo ao mostrar não apenas suas previsões, mas também a variação esperada das estimativas quando diferentes amostras da base são utilizadas.
+diff --git a/consolidado/08_regularizacao_linear.md b/consolidado/08_regularizacao_linear.md
+new file mode 100644
+index 00000000..3ab9dc3a
+--- /dev/null
++++ b/consolidado/08_regularizacao_linear.md
+@@ -0,0 +1,147 @@
++# Consolidado --- Regularização Linear
++
++## 1. Objetivo
++
++A tarefa aplicou **Ridge (L2), Lasso (L1) e Elastic Net** à mesma
++regressão linear múltipla consolidada anteriormente:
++
++**Valor FOB \~ Volume \* Rota Líder**
++
++O objetivo foi analisar como a regularização modifica os coeficientes, a
++quantidade de preditores mantidos e o desempenho preditivo em validação
++cruzada.
++
++## 2. Preparação dos dados
++
++Foi utilizada a base `df_sazonal_lideres.csv`.
++
++Foram construídas: - `volume_mil_ton`: volume convertido para milhões de
++toneladas; - `valor_milhoes_fob`: Valor US\$ FOB convertido para milhões
++de dólares; - `rota_lider`: combinação de Município + Fluxo + País +
++Descrição SH4.
++
++A estrutura da regressão anterior foi mantida, sem novos preditores. A
++matriz de projeto foi construída com `model.matrix()`, incluindo as
++variáveis de rota e as interações entre volume e rota.
++
++## 3. Modelo OLS
++
++O OLS foi utilizado como modelo de referência.
++
++-   MSE: **156,6**
++-   RMSE: **12,51**
++-   Preditores não nulos: **11**
++
++## 4. Ridge
++
++A Ridge utiliza penalização L2 e reduz a magnitude dos coeficientes, sem
++necessariamente zerá-los.
++
++-   Alpha: **0**
++-   Lambda: **4,8818**
++-   Seleção: `lambda.min`
++-   MSE: **175,1**
++-   RMSE: **13,23**
++-   Preditores não nulos: **11**
++
++## 5. Lasso
++
++A Lasso utiliza penalização L1 e pode zerar coeficientes, realizando
++seleção de variáveis.
++
++### Lasso --- `lambda.min`
++
++-   Alpha: **1**
++-   Lambda: **0,2667**
++-   MSE: **154,0**
++-   RMSE: **12,41**
++-   Preditores não nulos: **7**
++
++### Lasso --- `lambda.1se`
++
++-   Alpha: **1**
++-   Lambda: **2,4868**
++-   MSE: **179,0**
++-   RMSE: **13,38**
++-   Preditores não nulos: **5**
++
++O `lambda.1se` produz uma solução mais simples, reduzindo o modelo para
++5 preditores não nulos.
++
++## 6. Elastic Net
++
++O Elastic Net combina as penalizações L1 e L2.
++
++-   Alpha: **0,5**
++-   Lambda: **0,2103**
++-   Seleção: `lambda.min`
++-   MSE: **155,5**
++-   RMSE: **12,47**
++-   Preditores não nulos: **9**
++
++## 7. Comparação
++
++  -------------------------------------------------------------------------------
++  Modelo         Alpha     Lambda Seleção          CV MSE    CV RMSE   Preditores
++                                                                        não nulos
++  --------- ---------- ---------- ------------ ---------- ---------- ------------
++  OLS              ---        --- OLS               156,6      12,51           11
++
++  Ridge              0     4,8818 lambda.min        175,1      13,23           11
++
++  Lasso              1     0,2667 lambda.min        154,0      12,41            7
++
++  Lasso              1     2,4868 lambda.1se        179,0      13,38            5
++
++  Elastic          0,5     0,2103 lambda.min        155,5      12,47            9
++  Net                                                                
++  -------------------------------------------------------------------------------
++
++## 8. Comparação dos coeficientes
++
++A comparação dos coeficientes mostrou o efeito direto da regularização.
++
++Para `volume_mil_ton`:
++
++-   OLS: **0,47291**
++-   Ridge: **0,25570**
++-   Lasso (`lambda.1se`): **0,429853**
++-   Elastic Net: **0,437940**
++
++A Lasso também zerou alguns coeficientes associados às categorias de
++`rota_lider`, demonstrando sua capacidade de seleção de variáveis.
++
++## 9. Validação cruzada
++
++Os modelos foram avaliados por validação cruzada utilizando **MSE** e
++**RMSE**. O RMSE representa o erro na mesma escala da variável resposta
++e permite comparar o desempenho preditivo dos modelos.
++
++## 10. Resultados principais
++
++Os RMSEs obtidos foram:
++
++-   OLS: **12,51**
++-   Ridge: **13,23**
++-   Lasso (`lambda.min`): **12,41**
++-   Lasso (`lambda.1se`): **13,38**
++-   Elastic Net: **12,47**
++
++Na tabela de comparação, a Lasso com `lambda.min` apresentou o menor
++RMSE. Já a Lasso com `lambda.1se` produziu o modelo mais simples, com
++somente 5 preditores não nulos.
++
++## 11. Conclusão
++
++A tarefa demonstrou como Ridge, Lasso e Elastic Net podem controlar a
++complexidade de uma regressão linear.
++
++A **Ridge** reduziu a magnitude dos coeficientes, mantendo os 11
++preditores. A **Lasso** realizou seleção de variáveis, mantendo 7
++preditores com `lambda.min` e 5 com `lambda.1se`. O **Elastic Net**
++manteve 9 preditores.
++
++Os resultados mostram um equilíbrio entre desempenho preditivo e
++simplicidade do modelo. A Lasso com `lambda.min` apresentou RMSE de
++**12,41**, enquanto `lambda.1se` produziu uma solução mais enxuta, com 5
++preditores não nulos.
